@@ -1,78 +1,48 @@
 import flet as ft
-from conexion import ConexionDB
+from Persona.conexion import ConexionDB
+from dashboard_view import DashboardView
 
-def main(page: ft.Page):
-    page.title = "Sistema de Horarios - Login"
-    page.theme_mode = "light"
-    page.vertical_alignment = ft.MainAxisAlignment.CENTER
-    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    page.window_width = 420
-    page.window_height = 420
+class LoginView(ft.Container):
+    def __init__(self, page: ft.Page, cambiar_vista=None):
+        super().__init__(expand=True)
+        self.page = page
+        self.cambiar_vista = cambiar_vista
+        self.conexion = ConexionDB()
 
-    page.bgcolor = "#F3F4F6"
+        self.txt_usuario = ft.TextField(label="Usuario", width=250)
+        self.txt_password = ft.TextField(label="Contraseña", password=True, can_reveal_password=True, width=250)
+        self.lbl_mensaje = ft.Text(value="", color="red")
+        self.btn_ingresar = ft.ElevatedButton("Ingresar", on_click=self.login)
 
-    usuario = ft.TextField(label="Usuario", width=300, autofocus=True)
-    contrasena = ft.TextField(label="Contraseña", password=True, can_reveal_password=True, width=300)
-    mensaje_estado = ft.Text("", color="gray", size=12)
-    mensaje_debug = ft.Text("", color="gray", size=12)
+        self.content = ft.Column(
+            [
+                ft.Text("🔐 Login del Sistema de Horarios", size=22, weight="bold"),
+                self.txt_usuario,
+                self.txt_password,
+                self.btn_ingresar,
+                self.lbl_mensaje
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER
+        )
 
+    def login(self, e):
+        usuario = self.txt_usuario.value.strip()
+        password = self.txt_password.value.strip()
 
-    def verificar_conexion():
-        db = ConexionDB()
-        conexion = db.conectar()
-        if conexion:
-            mensaje_debug.value = "✅ Conexión establecida con la base de datos"
-            db.cerrar(conexion)
-        else:
-            mensaje_debug.value = "❌ No se pudo conectar a la base de datos"
-            mensaje_debug.color = "red"
-        page.update()
-
-    def login_click(e):
-        user = usuario.value.strip()
-        pwd = contrasena.value.strip()
-
-        if not user or not pwd:
-            mensaje_estado.value = "⚠️ Complete ambos campos."
-            mensaje_estado.color = "orange"
-            page.update()
+        if not usuario or not password:
+            self.lbl_mensaje.value = "⚠️ Ingrese usuario y contraseña"
+            self.lbl_mensaje.color = "red"
+            self.update()
             return
 
-        db = ConexionDB()
-        resultado = db.login_usuario(user, pwd)
-
-        if resultado["status"]:
-            mensaje_estado.value = f"✅ {resultado['mensaje']}: {resultado['data']['nombre_usuario']}"
-            mensaje_estado.color = "green"
+        if self.conexion.login_usuario(usuario, password):
+            self.lbl_mensaje.value = "✅ Acceso correcto"
+            self.lbl_mensaje.color = "green"
+            self.update()
+            dashboard = DashboardView(self.page, self.cambiar_vista)
+            self.cambiar_vista(dashboard)
         else:
-            mensaje_estado.value = f"❌ {resultado['mensaje']}"
-            mensaje_estado.color = "red"
-
-        page.update()
-
-    boton_login = ft.ElevatedButton("Iniciar Sesión", width=300, on_click=login_click)
-
-    card = ft.Container(
-        content=ft.Column(
-            [
-                ft.Text("Inicio de Sesión", size=22, weight="bold", text_align="center"),
-                usuario,
-                contrasena,
-                boton_login,
-                mensaje_estado,
-                mensaje_debug
-            ],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=15
-        ),
-        padding=40,
-        border_radius=20,
-        bgcolor="white",
-        shadow=ft.BoxShadow(blur_radius=20, color="#ccc"),
-        alignment=ft.alignment.center
-    )
-
-    page.add(card)
-    verificar_conexion()
-
-ft.app(target=main)
+            self.lbl_mensaje.value = "❌ Usuario o contraseña incorrectos"
+            self.lbl_mensaje.color = "red"
+            self.update()

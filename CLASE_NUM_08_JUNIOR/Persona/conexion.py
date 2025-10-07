@@ -5,7 +5,7 @@ class ConexionDB:
     def __init__(self):
         self.host = "localhost"
         self.user = "root"
-        self.password = ""
+        self.password = "1234"
         self.database = "Horarios_Marello"
 
     def conectar(self):
