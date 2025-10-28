@@ -70,6 +70,7 @@ class DashboardView(ft.Container):
         if nombre_tabla == "Docentes":
             docentes_vista = DocentesView(self.page, volver_atras=lambda: self.cambiar_vista(DashboardView(self.page, self.cambiar_vista)))
             self.cambiar_vista(docentes_vista)
+        
         else:
             dlg = ft.AlertDialog(
                 title=ft.Text("Tabla no implementada"),
