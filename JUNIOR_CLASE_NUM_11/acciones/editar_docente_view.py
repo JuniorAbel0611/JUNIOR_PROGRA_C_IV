@@ -8,51 +8,48 @@ class EditarDocenteView(ft.Container):
         self.docente_id = docente_id
         self.conexion = ConexionDB()
 
-        # 🔹 Título
         self.titulo = ft.Text(f"✏️ Editar Docente (ID: {docente_id})", size=22, weight="bold")
 
-        # Contenido mientras carga
+        # Contenido temporal mientras carga
         self.column = ft.Column(
             [
                 self.titulo,
                 ft.ProgressRing(),
             ],
-            alignment=ft.MainAxisAlignment.CENTER,   # 🔹 Centra verticalmente
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,  # 🔹 Centra horizontalmente
+            alignment=ft.MainAxisAlignment.START,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=20,
         )
 
-        # Contenedor principal centrado
         self.content = ft.Container(
             content=self.column,
-            alignment=ft.alignment.center,  # 🔹 Asegura el centrado total
+            alignment=ft.alignment.center,
             padding=20
         )
 
-        # Mostrar el contenedor
-        self.controls = [self.content]
-        self.cargar_datos_docente()
+        self.cargar_datos_persona()
 
     # ───────────────────────────────
-    def cargar_datos_docente(self):
+    def cargar_datos_persona(self):
         conexion = self.conexion.conectar()
         if conexion:
             cur = conexion.cursor()
             try:
                 cur.execute("""
-                    SELECT persona_id, codigo_docente, activo, especialidad_id
-                    FROM docentes
+                    SELECT nombres, apellidos, numero_documento, telefono
+                    FROM personas
                     WHERE docente_id = %s
                 """, (self.docente_id,))
                 datos = cur.fetchone()
 
                 if datos:
-                    persona_id, codigo_docente, activo, especialidad_id = datos
+                    nombres, apellidos, numero_documento, telefono = datos
 
-                    self.txt_persona = ft.TextField(label="ID Persona", value=str(persona_id), width=350)
-                    self.txt_codigo = ft.TextField(label="Código Docente", value=codigo_docente, width=350)
-                    self.txt_activo = ft.TextField(label="Activo (1 o 0)", value=str(activo), width=350)
-                    self.txt_especialidad = ft.TextField(label="ID Especialidad", value=str(especialidad_id), width=350)
+                    # Campos dinámicos
+                    self.txt_nombre = ft.TextField(label="Nombres", value=nombres, width=350)
+                    self.txt_apellido = ft.TextField(label="Apellidos", value=apellidos, width=350)
+                    self.txt_dni = ft.TextField(label="DNI", value=numero_documento, width=350)
+                    self.txt_telefono = ft.TextField(label="Teléfono", value=telefono, width=350)
 
                     btn_guardar = ft.ElevatedButton(
                         "💾 Guardar cambios",
@@ -61,33 +58,29 @@ class EditarDocenteView(ft.Container):
                         on_click=self.guardar_cambios
                     )
 
-                    btn_atras = ft.OutlinedButton("⬅️ Volver", on_click=self.volver_a_docentes)
+                    btn_atras = ft.OutlinedButton(
+                        "⬅️ Volver a lista",
+                        on_click=self.volver_a_personas
+                    )
 
-                    # 🔹 Reemplazamos el contenido por el formulario centrado
+                    # Actualizamos el contenido
                     self.column.controls.clear()
                     self.column.controls.extend([
                         self.titulo,
                         ft.Column(
-                            [
-                                self.txt_persona,
-                                self.txt_codigo,
-                                self.txt_activo,
-                                self.txt_especialidad,
-                            ],
-                            spacing=10,
-                            alignment=ft.MainAxisAlignment.CENTER,
-                            horizontal_alignment=ft.CrossAxisAlignment.CENTER
+                            [self.txt_nombre, self.txt_apellido, self.txt_dni, self.txt_telefono],
+                            spacing=10
                         ),
-                        ft.Row([btn_guardar, btn_atras], alignment=ft.MainAxisAlignment.CENTER, spacing=15)
+                        ft.Row([btn_guardar, btn_atras], spacing=15)
                     ])
                     self.page.update()
                 else:
                     self.column.controls.clear()
-                    self.column.controls.append(ft.Text("❌ No se encontraron datos para este docente.", color="red"))
+                    self.column.controls.append(ft.Text("❌ No se encontraron datos para esta persona.", color="red"))
                     self.page.update()
 
             except Exception as e:
-                print(f"❌ Error al cargar docente: {e}")
+                print(f"❌ Error al cargar persona: {e}")
             finally:
                 self.conexion.cerrar(conexion)
 
@@ -98,27 +91,29 @@ class EditarDocenteView(ft.Container):
             cur = conexion.cursor()
             try:
                 cur.execute("""
-                    UPDATE docentes
-                    SET persona_id=%s, codigo_docente=%s, activo=%s, especialidad_id=%s
-                    WHERE docente_id=%s
+                    UPDATE personas
+                    SET nombres=%s, apellidos=%s, numero_documento=%s, telefono=%s
+                    WHERE persona_id=%s
                 """, (
-                    self.txt_persona.value,
-                    self.txt_codigo.value,
-                    self.txt_activo.value,
-                    self.txt_especialidad.value,
+                    self.txt_nombre.value,
+                    self.txt_apellido.value,
+                    self.txt_dni.value,
+                    self.txt_telefono.value,
                     self.docente_id
                 ))
                 conexion.commit()
-                print(f"✅ Docente actualizado correctamente (ID: {self.docente_id})")
+
+                print(f"✅ Persona actualizada correctamente (ID: {self.docente_id})")
 
                 self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Cambios guardados correctamente ✅", color="white"),
+                    ft.Text("Cambios guardados correctamente ✅", color="white"),
                     bgcolor="green",
                     open=True
                 )
                 self.page.update()
 
-                self.volver_a_docentes()
+                # Volvemos a la lista automáticamente después de guardar
+                self.volver_a_personas()
 
             except Exception as ex:
                 print(f"❌ Error al guardar cambios: {ex}")
@@ -127,8 +122,8 @@ class EditarDocenteView(ft.Container):
 
     # ───────────────────────────────
     def volver_a_docentes(self, e=None):
-        """Regresa a la vista principal de docentes."""
-        print("🔙 Volviendo a la vista de Docentes...")
+        """Regresa a la vista de Personas."""
+        print("🔙 Volviendo a la vista de Personas...")
         from Docente.docentes_view import DocentesView
         self.page.clean()
         self.page.add(DocentesView(self.page, None))
